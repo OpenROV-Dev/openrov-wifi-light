@@ -12,7 +12,9 @@ end
 
 print("Starting init.lua... \n") -- print to your serial terminal (for debugging)
 wifi.setmode(wifi.STATION) -- set the module in STATION mode
-wifi.sta.config("OpenROV","openadventure")
+cfg={ip="192.168.1.91",netmask="255.255.255.0",gateway="192.168.1.1"}
+wifi.sta.setip(cfg) -- set static IP
+wifi.sta.config("OpenROV","openadventure") -- SSID, PASSWORD
 wifi.sta.autoconnect(1)
-wait_wifi()
+wait_wifi() -- call wait_wifi function
 

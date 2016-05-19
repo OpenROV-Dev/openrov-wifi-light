@@ -3,27 +3,26 @@ print("Starting main.lua... \n")
 gpio.mode(3, gpio.OUTPUT)
 srv=net.createServer(net.TCP,28800)
 print("Server created... \n")
-local pinState=0
 srv:listen(80,function(conn)
     conn:on("receive", function(conn,request)
-        local _, _, method, path, vars = string.find(request, "([A-Z]+) (.+)?(.+) HTTP");
+        local _,_,method,path= string.find(request, "([A-Z]+) (.+)?(.+) HTTP")
+        local _, _, key,light_level = string.find(request, "(%a+)%s*:%s*(%d+)")
         if(method == nil)then
-            _, _, method, path = string.find(request, "([A-Z]+) (.+) HTTP");
+            _,_,method,path = string.find(request, "([A-Z]+) (.+) HTTP")
         end
-        
+        local duty=light_level*1023/100
+        pwm.setup(3, 500, duty)
         local message={}
-        print("Method:"..method);
-        if(method == "POST")then
-           if(pinState==0)then
-              gpio.write(3,gpio.HIGH)
-              pinState=1
-              print("LED ON")
+        print("Level:"..light_level)
+        if(method == "POST")then --light_level was sent from node.js as the header of the request
+           if(duty>0)then
+              pwm.start(3)
+              print("LED ON, POWER:"..light_level)
               message[#message + 1] = "HTTP/1.1 200 OK\r\n"
               message[#message + 1] = "Content-Type: text/html\r\n\r\n"
               message[#message + 1] = "POST request successfully received\r\n"
-           elseif(pinState==1)then
-              gpio.write(3,gpio.LOW)
-              pinState=0
+           elseif(duty==0)then
+              pwm.stop(3)
               print("LED OFF")
               message[#message + 1] = "HTTP/1.1 200 OK\r\n"
               message[#message + 1] = "Content-Type: text/html\r\n\r\n"
@@ -44,14 +43,13 @@ srv:listen(80,function(conn)
         conn:on("sent", send)
         send()
         local message={}
-        local _, _, method, path, vars= {}
+        local method,path,key,light_level= {}
         local heapSize=node.heap()
-        if heapSize<1000 then
+        if heapSize<2000 then
            node.restart()
         end
         collectgarbage()
         print("Memory Used:"..collectgarbage("count"))
         print("Heap Available:"..heapSize)
-        
     end)
 end)
